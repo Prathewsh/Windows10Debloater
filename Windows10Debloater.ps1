@@ -16,14 +16,14 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 }
 
 #no errors throughout
-$ErrorActionPreference = 'silentlycontinue'
+$ErrorActionPreference = 'Continue'
 
 # Import stability functions
 $StabilityScript = Join-Path $PSScriptRoot "StabilityFunctions.ps1"
 If (Test-Path $StabilityScript) {
     . $StabilityScript
 } Else {
-    Write-Warning "StabilityFunctions.ps1 not found. Proceeding without safety checks."
+    throw "StabilityFunctions.ps1 is required. Extract the complete repository before running this script."
 }
 
 $DebloatFolder = "C:\Temp\Windows10Debloater"
@@ -46,7 +46,7 @@ Function DebloatAll {
     #Credit to /u/GavinEke for a modified version of my whitelist code
     $WhitelistedApps = 'Microsoft.ScreenSketch|Microsoft.WindowsCalculator|Microsoft.WindowsStore|Microsoft.Windows.Photos|CanonicalGroupLimited.UbuntuonWindows|Microsoft.XboxGameCallableUI|Microsoft.XboxGamingOverlay|Microsoft.Xbox.TCUI|Microsoft.XboxIdentityProvider|Microsoft.MicrosoftStickyNotes|Microsoft.MSPaint|Microsoft.WindowsCamera|.NET|Framework|Microsoft.HEIFImageExtension|Microsoft.StorePurchaseApp|Microsoft.VP9VideoExtensions|Microsoft.WebMediaExtensions|Microsoft.WebpImageExtension|Microsoft.DesktopAppInstaller|WindSynthBerry|MIDIBerry|Slack'
     #NonRemovable Apps that were getting attempted and the system would reject the uninstall, speeds up debloat and prevents 'initializing' overlay when removing apps
-    $NonRemovable = '1527c705-839a-4832-9118-54d4Bd6a0c89|c5e2524a-ea46-4f67-841f-6a9465d9d515|E2A4F912-2574-4A75-9BB0-0D023378592B|F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE|InputApp|Microsoft.AAD.BrokerPlugin|Microsoft.AccountsControl|Microsoft.BioEnrollment|Microsoft.CredDialogHost|Microsoft.ECApp|Microsoft.LockApp|Microsoft.MicrosoftEdgeDevToolsClient|Microsoft.MicrosoftEdge|Microsoft.PPIProjection|Microsoft.Win32WebViewHost|Microsoft.Windows.Apprep.ChxApp|Microsoft.Windows.AssignedAccessLockApp|Microsoft.Windows.CapturePicker|Microsoft.Windows.CloudExperienceHost|Microsoft.Windows.ContentDeliveryManager|Microsoft.Windows.Cortana|Microsoft.Windows.NarratorQuickStart|Microsoft.Windows.ParentalControls|Microsoft.Windows.PeopleExperienceHost|Microsoft.Windows.PinningConfirmationDialog|Microsoft.Windows.SecHealthUI|Microsoft.Windows.SecureAssessmentBrowser|Microsoft.Windows.ShellExperienceHost|Microsoft.Windows.XGpuEjectDialog|Microsoft.XboxGameCallableUI|Windows.CBSPreview|windows.immersivecontrolpanel|Windows.PrintDialog|Microsoft.VCLibs.140.00|Microsoft.Services.Store.Engagement|Microsoft.UI.Xaml.2.0|*Nvidia*|*Acer*|*Asus*|*Dell*|*HP*|*Lenovo*|*Toshiba*'
+    $NonRemovable = '1527c705-839a-4832-9118-54d4Bd6a0c89|c5e2524a-ea46-4f67-841f-6a9465d9d515|E2A4F912-2574-4A75-9BB0-0D023378592B|F46D4000-FD22-4DB4-AC8E-4E1DDDE828FE|InputApp|Microsoft.AAD.BrokerPlugin|Microsoft.AccountsControl|Microsoft.BioEnrollment|Microsoft.CredDialogHost|Microsoft.ECApp|Microsoft.LockApp|Microsoft.MicrosoftEdgeDevToolsClient|Microsoft.MicrosoftEdge|Microsoft.PPIProjection|Microsoft.Win32WebViewHost|Microsoft.Windows.Apprep.ChxApp|Microsoft.Windows.AssignedAccessLockApp|Microsoft.Windows.CapturePicker|Microsoft.Windows.CloudExperienceHost|Microsoft.Windows.ContentDeliveryManager|Microsoft.Windows.Cortana|Microsoft.Windows.NarratorQuickStart|Microsoft.Windows.ParentalControls|Microsoft.Windows.PeopleExperienceHost|Microsoft.Windows.PinningConfirmationDialog|Microsoft.Windows.SecHealthUI|Microsoft.Windows.SecureAssessmentBrowser|Microsoft.Windows.ShellExperienceHost|Microsoft.Windows.XGpuEjectDialog|Microsoft.XboxGameCallableUI|Windows.CBSPreview|windows.immersivecontrolpanel|Windows.PrintDialog|Microsoft.VCLibs.140.00|Microsoft.Services.Store.Engagement|Microsoft.UI.Xaml.2.0|Nvidia|Acer|Asus|Dell|HP|Lenovo|Toshiba'
     Get-AppxPackage -AllUsers | Where-Object {$_.Name -NotMatch $WhitelistedApps -and $_.Name -NotMatch $NonRemovable} | Remove-AppxPackage
     Get-AppxPackage | Where-Object {$_.Name -NotMatch $WhitelistedApps -and $_.Name -NotMatch $NonRemovable} | Remove-AppxPackage
     Get-AppxProvisionedPackage -Online | Where-Object {$_.PackageName -NotMatch $WhitelistedApps -and $_.PackageName -NotMatch $NonRemovable} | Remove-AppxProvisionedPackage -Online
@@ -543,111 +543,10 @@ Function FixWhitelistedApps {
         "Microsoft.WindowsCamera"
     )
     ForEach ($App in $WhitelistedAppsToFix) {
-        If (!(Get-AppxPackage -AllUsers -Name $App)) {
+        If (!(Get-AppxPackage -Name $App)) {
             Get-AppxPackage -AllUsers $App | ForEach { Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml" }
         }
     }
-}
-
-Function UninstallOneDrive {
-
-    Write-Host "Checking for pre-existing files and folders located in the OneDrive folders..."
-    Start-Sleep 1
-    # BEFORE MOVING: Stop OneDrive process to release file locks
-    Write-Host "Stopping OneDrive to release file locks..."
-    Stop-Process -Name "OneDrive*" -ErrorAction SilentlyContinue
-    taskkill.exe /F /IM explorer.exe /T /ErrorAction SilentlyContinue
-    Start-Sleep 2
-
-    If (Test-Path "$env:USERPROFILE\OneDrive") {
-        Write-Host "Files found within the OneDrive folder! Checking for backup location..."
-        Start-Sleep 1
-              
-        $BackupPath = "$env:USERPROFILE\Desktop\OneDriveBackupFiles"
-        If (!(Test-Path $BackupPath)) {
-            Write-Host "Creating backup folder 'OneDriveBackupFiles' on your desktop..."
-            New-Item -Path "$env:USERPROFILE\Desktop" -Name "OneDriveBackupFiles" -ItemType Directory -Force | Out-Null
-        }
-
-        Write-Host "Moving all files (including hidden) to $BackupPath. Please wait..."
-        # Robust move loop that includes hidden files and skips errors for busy items
-        Get-ChildItem -Path "$env:USERPROFILE\OneDrive" -Force -ErrorAction SilentlyContinue | ForEach-Object {
-            Try {
-                Move-Item -Path $_.FullName -Destination $BackupPath -Force -ErrorAction Stop
-            } Catch {
-                Write-Warning "Failed to move: $($_.FullName). File may be in use."
-            }
-        }
-        
-        # CRITICAL SAFETY CHECK: Only proceed with deletion if the folder is truly empty
-        $RemainingFiles = Get-ChildItem -Path "$env:USERPROFILE\OneDrive" -Force -ErrorAction SilentlyContinue
-        If ($RemainingFiles) {
-            Write-Warning "CRITICAL: Some files could not be moved from OneDrive. To prevent data loss, the OneDrive folder will NOT be deleted. Please check 'OneDriveBackupFiles' on your desktop."
-            $SkipRemoval = $true
-        } Else {
-            Write-Host "Successfully moved all files to $BackupPath."
-            $SkipRemoval = $false
-        }
-        Start-Sleep 1
-        Write-Host "Proceeding with the removal of OneDrive."
-        Start-Sleep 1
-    }
-    Else {
-        Write-Host "Either the OneDrive folder does not exist or there are no files to be found in the folder. Proceeding with removal of OneDrive."
-        Start-Sleep 1
-    }
-
-    Write-Host "Enabling the Group Policy 'Prevent the usage of OneDrive for File Storage'."
-    $OneDriveKey = 'HKLM:Software\Policies\Microsoft\Windows\OneDrive'
-    If (!(Test-Path $OneDriveKey)) {
-        Mkdir $OneDriveKey
-    }
-    Set-ItemProperty $OneDriveKey -Name OneDrive -Value DisableFileSyncNGSC
-
-    Write-Host "Uninstalling OneDrive. Please wait..."
-
-    New-PSDrive HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
-    $onedrive = "$env:SYSTEMROOT\SysWOW64\OneDriveSetup.exe"
-    $ExplorerReg1 = "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
-    $ExplorerReg2 = "HKCR:\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
-    Stop-Process -Name "OneDrive*"
-    Start-Sleep 2
-    If (!(Test-Path $onedrive)) {
-        $onedrive = "$env:SYSTEMROOT\System32\OneDriveSetup.exe"
-    }
-    Start-Process $onedrive "/uninstall" -NoNewWindow -Wait
-    Start-Sleep 2
-    Write-Host "Stopping explorer"
-    Start-Sleep 1
-    taskkill.exe /F /IM explorer.exe
-    Start-Sleep 3
-    Write-Host "Removing leftover OneDrive directories..."
-    If (Test-Path "$env:USERPROFILE\OneDrive" -and !$SkipRemoval) {
-        Remove-Item "$env:USERPROFILE\OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
-    }
-    If (Test-Path "$env:LOCALAPPDATA\Microsoft\OneDrive") {
-        Remove-Item "$env:LOCALAPPDATA\Microsoft\OneDrive" -Force -Recurse
-    }
-    If (Test-Path "$env:PROGRAMDATA\Microsoft OneDrive") {
-        Remove-Item "$env:PROGRAMDATA\Microsoft OneDrive" -Force -Recurse
-    }
-    If (Test-Path "$env:SYSTEMDRIVE\OneDriveTemp") {
-        Remove-Item "$env:SYSTEMDRIVE\OneDriveTemp" -Force -Recurse
-    }
-    Write-Host "Removing OneDrive from windows explorer"
-    If (!(Test-Path $ExplorerReg1)) {
-        New-Item $ExplorerReg1
-    }
-    Set-ItemProperty $ExplorerReg1 System.IsPinnedToNameSpaceTree -Value 0 
-    If (!(Test-Path $ExplorerReg2)) {
-        New-Item $ExplorerReg2
-    }
-    Set-ItemProperty $ExplorerReg2 System.IsPinnedToNameSpaceTree -Value 0
-    Write-Host "Restarting Explorer that was shut down before."
-    Start-Process explorer.exe -NoNewWindow
-    Write-Host "OneDrive has been successfully uninstalled!"
-    
-    Remove-item env:OneDrive
 }
 
 Function UnpinStart {

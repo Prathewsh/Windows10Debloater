@@ -12,7 +12,7 @@ $StabilityScript = Join-Path $PSScriptRoot "StabilityFunctions.ps1"
 If (Test-Path $StabilityScript) {
     . $StabilityScript
 } Else {
-    Write-Warning "StabilityFunctions.ps1 not found. Proceeding without safety checks."
+    throw "StabilityFunctions.ps1 is required. Extract the complete repository before running this script."
 }
 
 Function Begin-SysPrep {
@@ -44,7 +44,7 @@ Function Start-Debloat {
 
     #Removes AppxPackages
     #Credit to Reddit user /u/GavinEke for a modified version of my whitelist code
-    [regex]$WhitelistedApps = 'Microsoft.ScreenSketch|Microsoft.WindowsCalculator|Microsoft.WindowsStore|Microsoft.Windows.Photos|CanonicalGroupLimited.UbuntuonWindows|Microsoft.MicrosoftStickyNotes|Microsoft.MSPaint|Microsoft.WindowsCamera|.NET|Framework|Microsoft.HEIFImageExtension|Microsoft.StorePurchaseApp|Microsoft.VP9VideoExtensions|Microsoft.WebMediaExtensions|Microsoft.WebpImageExtension|Microsoft.DesktopAppInstaller|*Nvidia*|*Acer*|*Asus*|*Dell*|*HP*|*Lenovo*|*Toshiba*'
+    [regex]$WhitelistedApps = 'Microsoft.ScreenSketch|Microsoft.WindowsCalculator|Microsoft.WindowsStore|Microsoft.Windows.Photos|CanonicalGroupLimited.UbuntuonWindows|Microsoft.MicrosoftStickyNotes|Microsoft.MSPaint|Microsoft.WindowsCamera|.NET|Framework|Microsoft.HEIFImageExtension|Microsoft.StorePurchaseApp|Microsoft.VP9VideoExtensions|Microsoft.WebMediaExtensions|Microsoft.WebpImageExtension|Microsoft.DesktopAppInstaller|Nvidia|Acer|Asus|Dell|HP|Lenovo|Toshiba'
     Get-AppxPackage -AllUsers | Where-Object {$_.Name -NotMatch $WhitelistedApps} | Remove-AppxPackage -ErrorAction SilentlyContinue
     # Run this again to avoid error on 1803 or having to reboot.
     Get-AppxPackage -AllUsers | Where-Object {$_.Name -NotMatch $WhitelistedApps} | Remove-AppxPackage -ErrorAction SilentlyContinue
@@ -239,7 +239,7 @@ Function FixWhitelistedApps {
         "Microsoft.WindowsCamera"
     )
     ForEach ($App in $WhitelistedAppsToFix) {
-        If (!(Get-AppxPackage -AllUsers -Name $App)) {
+        If (!(Get-AppxPackage -Name $App)) {
             Get-AppxPackage -AllUsers $App | ForEach { Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml" }
         }
     }
@@ -277,7 +277,7 @@ If (Get-Command Run-SafetyChecks -ErrorAction SilentlyContinue) {
         Run-SafetyChecks -Description "Before using Windows10SysPrepDebloater.ps1"
     } Catch {
         Log-Error -Message "Safety checks failed: $($_.Exception.Message)" -Source "Windows10SysPrepDebloater.ps1"
-        Exit
+        throw
     }
 }
 

@@ -1,74 +1,78 @@
-# 🚀 Windows 10 Debloater Revamped
+# Windows 10 Debloater Revamped
 
-[![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-1f425f?style=flat-square&logo=powershell)](https://microsoft.com/PowerShell)
-[![Windows Support](https://img.shields.io/badge/Windows-10%20(22H2)%20%2F%2011-0078d4?style=flat-square&logo=windows)](https://www.microsoft.com/windows)
+[![PowerShell](https://img.shields.io/badge/PowerShell-5.1-1f425f?style=flat-square&logo=powershell)](https://microsoft.com/PowerShell)
+[![Windows targets](https://img.shields.io/badge/Windows-10%20(22H2)%20%2F%2011-0078d4?style=flat-square&logo=windows)](https://www.microsoft.com/windows)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![GitHub issues](https://img.shields.io/github/issues/Prathewsh/Windows10Debloater?style=flat-square)](https://github.com/Prathewsh/Windows10Debloater/issues)
 [![GitHub forks](https://img.shields.io/github/forks/Prathewsh/Windows10Debloater?style=flat-square)](https://github.com/Prathewsh/Windows10Debloater/network)
 
----
 
-### **Overview**
-A comprehensive, safety-focused overhaul of the original [Windows10Debloater](https://github.com/Sycnex/Windows10Debloater). This revamped edition fixes critical execution bugs, introduces **Full Windows 10 22H2 & Windows 11 Support**, updates bloatware definitions for 2024-2026, and implements **mandatory safety checks** to ensure your system remains stable and your data stays protected.
+PowerShell scripts for removing bundled apps and changing Windows privacy and desktop settings, based on [Sycnex/Windows10Debloater](https://github.com/Sycnex/Windows10Debloater).
 
----
+Use **Windows PowerShell 5.1 as Administrator**. The scripts target Windows 10 and recognize Windows 11, but compatibility with every build is not verified. Some registry tweaks, app names, and Start menu operations are specific to older Windows releases. PowerShell 7 and non-Windows hosts are not supported execution environments.
 
-### 💥 **Quick Start**
-The fastest way to get started (GUI version):
-Run PowerShell as Administrator and paste the following command:
+## Getting started
+
+1. Download or clone this repository and extract the **complete folder**.
+2. Review the scripts and back up important data. Broad removal can remove apps you use, including their provisioned packages for future users.
+3. Open **Windows PowerShell as Administrator** and change to the extracted folder.
+4. Allow scripts for this PowerShell session, then launch the GUI:
+
 ```powershell
-iwr -useb https://raw.githubusercontent.com/Prathewsh/Windows10Debloater/master/Windows10DebloaterGUI.ps1 | iex
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\Windows10DebloaterGUI.ps1
 ```
 
----
+Keep `StabilityFunctions.ps1` beside the three main scripts. They stop if this dependency is missing. Do not pipe a single downloaded script into `Invoke-Expression`: the scripts require local companion files and a script path for elevation.
 
-> [!IMPORTANT]
-> **Safety First**: As this tool is in active development, it has not been tested across every possible hardware configuration. **Please use it at your own risk; the author cannot be held responsible for unexpected system behavior.** We strongly advise reviewing the scripts and creating a **System Restore Point** before proceeding.
+## Choose an entry point
 
----
+| Script | Behavior |
+| --- | --- |
+| `Windows10DebloaterGUI.ps1` | Graphical controls for app removal, customization, privacy settings, and optional operations. |
+| `Windows10Debloater.ps1` | Interactive message boxes for debloating and selected revert operations. |
+| `Windows10SysPrepDebloater.ps1` | Switch-driven operations; safety checks can still prompt. It is not an unattended deployment tool. |
+| `Individual Scripts/` | Standalone legacy snippets. Most do not run shared safety checks; inspect each before use. Some have no `.ps1` extension. |
 
-## 🛡️ **Safety and Stability Features**
-To prevent system instability or data loss, this version includes:
-- **Automatic System Restore Points**: Attempts to create a restore point before any changes.
-- **System Protection Management**: Asks for permission to enable System Protection if it is currently disabled.
-- **OneDrive Data Safety**: Stops sync before moving files and includes a mandatory check: if files cannot be moved, the original folder will **NOT** be deleted.
-- **Whitelist Protection**: Newly discovered apps are **unchecked by default** in the Customize menu.
-- **Error Logging**: Detailed logs are saved to `C:\Temp\Windows10Debloater\errors.log`.
+Start with the GUI customization controls and inspect the app selection. Broad removal uses protection lists; it is more aggressive than removing listed bloatware. The actual package lists in the scripts are the source of truth and differ between entry points.
 
----
+### SysPrep switches
 
-## 📦 **Choose Your Version**
-| Version | Best For... | File |
-| :--- | :--- | :--- |
-| **GUI App** | Most users; easy one-click buttons. | `Windows10DebloaterGUI.ps1` |
-| **Interactive** | Users who want step-by-step console prompts. | `Windows10Debloater.ps1` |
-| **Sysprep** | IT Admins; silent deployment/imaging. | `Windows10SysPrepDebloater.ps1` |
+```powershell
+.\Windows10SysPrepDebloater.ps1 -Debloat
+.\Windows10SysPrepDebloater.ps1 -Privacy
+.\Windows10SysPrepDebloater.ps1 -Debloat -Privacy
+```
 
----
+- `-Debloat` removes apps outside its protection list, cleans associated registry entries, and attempts to register missing protected apps from packages still present on the machine.
+- `-Privacy` applies privacy and telemetry settings.
+- `-SysPrep` invokes the legacy preparation function, whose operations are currently commented out. It does not run Windows Sysprep or generalize an image.
+- **With no switches, all three paths are selected.** Service checks run afterward regardless of switches.
 
-## 🚀 **How to Run**
+## Safety and recovery
 
-### **Method 1: Manual Download (Recommended)**
-1.  [Download the source code](https://github.com/Prathewsh/Windows10Debloater/archive/refs/heads/master.zip) and extract it.
-2.  Open **PowerShell** as **Administrator**.
-3.  Enable script execution: `Set-ExecutionPolicy Unrestricted -Force`
-4.  Run: `.\Windows10DebloaterGUI.ps1`
+The main scripts check administrator privileges and the OS, offer to enable System Protection on the system drive, and attempt a restore point. They verify that a new point exists before reporting success. If creation fails or is throttled, continuing requires an explicit `Y` or `Yes` response. Windows normally limits new restore points to one per day; see Microsoft's [Checkpoint-Computer documentation](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/checkpoint-computer?view=powershell-5.1).
 
-### **Method 2: Right-Click**
-Right-click any `.ps1` file and select **"Run with PowerShell"**.
+System Protection uses [Enable-ComputerRestore](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/enable-computerrestore?view=powershell-5.1). Restore points are not a backup of personal files or a guarantee that removed apps can be recovered.
 
----
+OneDrive removal uses the installed uninstaller and checks its exit code. The scripts do not move or recursively delete sync folders, application data, or temporary OneDrive directories. Online-only files are not downloaded or backed up; ensure needed files are available before uninstalling. If no installer is found, use Windows Settings.
 
-## 🛠️ **Advanced Usage (Parameters)**
-`Windows10SysPrepDebloater.ps1` supports these switches:
-- **`-SysPrep`**: Runs `get-appxpackage | remove-appxpackage` first for provisioning.
-- **`-Debloat`**: Runs `Start-Debloat`, `Remove-Keys`, and `Protect-Privacy`.
-- **`-Privacy`**: Disables telemetry, unnecessary tasks, and Cortana search.
+Revert controls restore selected settings and attempt app registration; they do not restore every original value or reinstall packages that are no longer present. Disabling Windows Update can prevent updates and may fail for protected services. Start menu unpinning and older Edge tweaks may have no effect on newer builds.
 
----
+Caught safety-check failures are logged to `C:\Temp\Windows10Debloater\errors.log`; this is not a complete audit of every operation. Review console errors as well.
 
-## 🗑️ **Bloatware Coverage**
-This tool removes established bloatware and newly added modern apps.
+## Recent fixes
+
+- Corrected invalid OEM wildcard syntax in regex protection lists.
+- Fixed the System Protection command, forwarded restore-point descriptions, and checked restore-point creation results.
+- Required the shared safety file instead of silently skipping checks.
+- Initialized GUI message-box support before elevation and made cancellation exit.
+- Replaced duplicated OneDrive cleanup with one shared uninstaller that preserves user folders and checks failures.
+- Corrected the interactive and SysPrep repair checks to look for missing apps in the current user account before finding installed packages across users.
+- Made general errors visible in the interactive and GUI scripts.
+
+## **Bloatware Coverage**
+The following lists preserve the original app coverage reference. Selection and protection rules differ between scripts; an app listed here is not necessarily removed by every mode. Review the package lists and GUI selection before running.
 
 <details>
 <summary><b>Click to view full list of removed apps</b></summary>
@@ -82,10 +86,12 @@ This tool removes established bloatware and newly added modern apps.
 
 ---
 
-## 📝 **Detailed Changelog (Revamped Fork)**
+## **Detailed Changelog (Revamped Fork)**
 
 <details>
 <summary><b>Click to view all technical improvements and bug fixes</b></summary>
+
+These entries describe the fork’s earlier changes, with corrections where the current implementation differs. See **Recent fixes** above for this update.
 
 ### **Critical Bug Fixes**
 - **Fixed crash-causing undefined functions** — `DisableDiagTrack` and `DisableWAPPush` were called but never defined, causing the interactive script to crash mid-execution.
@@ -101,7 +107,7 @@ This tool removes established bloatware and newly added modern apps.
 - **Fixed Minecraft/Xbox sign-in issues** — Stopped the script from disabling the `XblGameSaveTask` scheduled task.
 - **Fixed missing Toast Notifications and Screen Snip** — Removed the `NoTileApplicationNotification` registry override.
 - **Fixed OEM app removals (Acer, HP, Lenovo, etc.)** — Added OEM vendor wildcards to the Protected/NonRemovable lists so critical proprietary functionality is no longer broken.
-- **Fixed Unpin Start feature** — Removed the broken `StartMenuLayout.xml` method and replaced it with a much safer and fully working `CloudStore` registry wipe.
+- **Unpin Start feature** — The interactive script uses a Start layout XML method, while the GUI invokes shell unpin verbs. Behavior depends on Windows version and display language; a working CloudStore reset is not implemented by these entry points.
 - **Fixed Customize GUI** — Resolved "not ticking" checkbox issue and added Select/Deselect All buttons.
 </details>
 
@@ -109,21 +115,33 @@ This tool removes established bloatware and newly added modern apps.
 <summary><b>Click to view new features and support</b></summary>
 
 ### **New Features Supported**
-- **Full Windows 10 22H2 Support** — Optimized all telemetry and bloatware removal tasks specifically for the latest Windows 10 builds.
-- **Windows Update Management** — Added the ability to completely disable or re-enable Windows Update services (`wuauserv`, `WaaSMedicSvc`, `UsoSvc`) automatically via Individual Scripts, the interactive console prompt, or the new dedicated buttons in the GUI.
+- **Windows 10 22H2 adjustments** — Includes updated search and telemetry settings. Full compatibility across Windows 10 and Windows 11 builds has not been verified.
+- **Windows Update Management** — Includes commands to disable or re-enable Windows Update services (`wuauserv`, `WaaSMedicSvc`, `UsoSvc`) via Individual Scripts, interactive prompts, and GUI buttons. Protected services may reject changes; the commands do not guarantee that updates are completely disabled.
 - **Bing Search (22H2 Fix)** — Uses `DisableSearchBoxSuggestions` (the `BingSearchEnabled` key is ignored on 22H2).
 - **Telemetry tasks**: Disables `Microsoft Compatibility Appraiser`, `ProgramDataUpdater`, and `Proxy` (Application Experience tasks).
-- **Services**: Properly stops and disables both `DiagTrack` and `dmwappushservice` in all scripts.
+- **Services**: Includes telemetry service settings. Behavior differs by entry point; the SysPrep script checks and re-enables `dmwappushservice` for deployment compatibility.
 - **Removed obsolete Wi-Fi Sense code** — Wi-Fi Sense was removed in Windows 10 version 1607 (2016).
 </details>
 
 ---
 
-## 🙌 **Credits & Contributors**
+## Validation
+
+From Windows PowerShell, run:
+
+```powershell
+.\tests\Validate.ps1
+```
+
+This parses the main scripts and individual snippets, compiles literal protection regexes, and runs mocked restore-point and uninstaller failure checks. GitHub Actions runs it with Windows PowerShell. These checks do not execute debloating or certify Windows compatibility; test changes in a disposable Windows VM before using them on a primary machine.
+
+## **Credits & Contributors**
 Original project: [Sycnex/Windows10Debloater](https://github.com/Sycnex/Windows10Debloater).
 
 Special thanks to the original contributors for the suggestions, code, and fixes:
 **a60wattfish, abulgatz, xsisbest, Damian, Vikingat-RAGE, /u/GavinEke**, and everyone listed [here](https://github.com/Sycnex/Windows10Debloater/graphs/contributors).
 
 ---
-🧪 **Testers welcome!** If you encounter any issues, please [open an issue](https://github.com/Prathewsh/Windows10Debloater/issues).
+ **Testers welcome!** If you encounter any issues, please [open an issue](https://github.com/Prathewsh/Windows10Debloater/issues).
+
+Licensed under [MIT](LICENSE).

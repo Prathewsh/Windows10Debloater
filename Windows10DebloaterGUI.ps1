@@ -8,15 +8,17 @@ $EnableEdgePDFTakeover.Location = New-Object System.Drawing.Point(155, 260)
 
 #This will self elevate the script so with a UAC prompt since this script needs to be run as an Administrator in order to function properly.
 
-$ErrorActionPreference = 'SilentlyContinue'
+$ErrorActionPreference = 'Continue'
 
 # Import stability functions
 $StabilityScript = Join-Path $PSScriptRoot "StabilityFunctions.ps1"
 If (Test-Path $StabilityScript) {
     . $StabilityScript
 } Else {
-    Write-Warning "StabilityFunctions.ps1 not found. Proceeding without safety checks."
+    throw "StabilityFunctions.ps1 is required. Extract the complete repository before running this script."
 }
+
+Add-Type -AssemblyName PresentationFramework
 
 $Button = [System.Windows.MessageBoxButton]::YesNoCancel
 $ErrorIco = [System.Windows.MessageBoxImage]::Error
@@ -37,8 +39,8 @@ If (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
             Start-Process PowerShell.exe -ArgumentList ("-NoProfile -ExecutionPolicy Bypass -File `"{0}`"" -f $PSCommandPath) -Verb RunAs
             Exit
         }
-        No {
-            Break
+        default {
+            Exit
         }
     }
 }
@@ -607,7 +609,7 @@ $CustomizeBlacklist.Add_Click( {
         })
 
         $SaveList.Add_Click( {
-               # $ErrorActionPreference = 'SilentlyContinue'
+               # $ErrorActionPreference = 'Continue'
 
                 '$global:WhiteListedApps = @(' | Out-File -FilePath $PSScriptRoot\custom-lists.ps1 -Encoding utf8
                 @($ListPanel.controls) | ForEach {
@@ -763,7 +765,7 @@ $CustomizeBlacklist.Add_Click( {
 
 
 $RemoveBlacklistedBloatware.Add_Click( { 
-        $ErrorActionPreference = 'SilentlyContinue'
+        $ErrorActionPreference = 'Continue'
         Function DebloatBlacklist {
             Write-Host "Requesting removal of selected blocklist apps"
             Write-Host "--- This may take a while - please be patient ---"
@@ -780,7 +782,7 @@ $RemoveBlacklistedBloatware.Add_Click( {
         Write-Host "Bloatware removed!"
     })
 $RemoveAllBloatware.Add_Click( { 
-        $ErrorActionPreference = 'SilentlyContinue'
+        $ErrorActionPreference = 'Continue'
         #This function finds any AppX/AppXProvisioned package and uninstalls it, except for Freshpaint, Windows Calculator, Windows Store, and Windows Photos.
         #Also, to note - This does NOT remove essential system services/software/etc such as .NET framework installations, Cortana, Edge, etc.
 
@@ -1013,7 +1015,7 @@ $RemoveAllBloatware.Add_Click( {
   
     } )
 $RevertChanges.Add_Click( { 
-        $ErrorActionPreference = 'SilentlyContinue'
+        $ErrorActionPreference = 'Continue'
         #This function will revert the changes you made when running the Start-Debloat function.
         
         #This line reinstalls all of the bloatware that was removed
@@ -1109,7 +1111,7 @@ $RevertChanges.Add_Click( {
         }
     })
 $DisableCortana.Add_Click( { 
-        $ErrorActionPreference = 'SilentlyContinue'
+        $ErrorActionPreference = 'Continue'
         Write-Host "Disabling Cortana"
         $Cortana1 = "HKCU:\SOFTWARE\Microsoft\Personalization\Settings"
         $Cortana2 = "HKCU:\SOFTWARE\Microsoft\InputPersonalization"
@@ -1130,7 +1132,7 @@ $DisableCortana.Add_Click( {
         Write-Host "Cortana has been disabled."
     })
 $DisableEdgePDFTakeover.Add_Click( { 
-        $ErrorActionPreference = 'SilentlyContinue'
+        $ErrorActionPreference = 'Continue'
         #Stops edge from taking over as the default .PDF viewer    
         Write-Host "Stopping Edge from taking over as the default .PDF viewer"
         $NoPDF = "HKCR:\.pdf"
@@ -1163,7 +1165,7 @@ $DisableEdgePDFTakeover.Add_Click( {
         Write-Host "Edge should no longer take over as the default .PDF."
     })
 $EnableCortana.Add_Click( { 
-        $ErrorActionPreference = 'SilentlyContinue'
+        $ErrorActionPreference = 'Continue'
         Write-Host "Re-enabling Cortana"
         $Cortana1 = "HKCU:\SOFTWARE\Microsoft\Personalization\Settings"
         $Cortana2 = "HKCU:\SOFTWARE\Microsoft\InputPersonalization"
@@ -1185,7 +1187,7 @@ $EnableCortana.Add_Click( {
     })
 $EnableEdgePDFTakeover.Add_Click( { 
         New-PSDrive  HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
-        $ErrorActionPreference = 'SilentlyContinue'
+        $ErrorActionPreference = 'Continue'
         Write-Host "Setting Edge back to default"
         $NoPDF = "HKCR:\.pdf"
         $NoProgids = "HKCR:\.pdf\OpenWithProgids"
@@ -1218,7 +1220,7 @@ $EnableEdgePDFTakeover.Add_Click( {
         Write-Host "Edge will now be able to be used for .PDF."
     })
 $DisableTelemetry.Add_Click( { 
-        $ErrorActionPreference = 'SilentlyContinue'
+        $ErrorActionPreference = 'Continue'
         #Disables Windows Feedback Experience
         Write-Host "Disabling Windows Feedback Experience program"
         $Advertising = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
@@ -1357,7 +1359,7 @@ $DisableTelemetry.Add_Click( {
         Write-Host "Telemetry has been disabled!"
     })
 $RemoveRegkeys.Add_Click( { 
-        $ErrorActionPreference = 'SilentlyContinue'
+        $ErrorActionPreference = 'Continue'
 
         New-PSDrive HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
 
@@ -1412,104 +1414,12 @@ $UnpinStartMenuTiles.Add_Click( {
         % { $_.DoIt() }
     })
 
-$RemoveOnedrive.Add_Click( { 
-        # BEFORE MOVING: Stop OneDrive process to release file locks
-        Write-Host "Stopping OneDrive to release file locks..."
-        Stop-Process -Name "OneDrive*" -ErrorAction SilentlyContinue
-        taskkill.exe /F /IM explorer.exe /T /ErrorAction SilentlyContinue
-        Start-Sleep 2
-
-        If (Test-Path "$env:USERPROFILE\OneDrive") {
-            Write-Host "Files found within the OneDrive folder! Checking for backup location..."
-            Start-Sleep 1
-              
-            $BackupPath = "$env:USERPROFILE\Desktop\OneDriveBackupFiles"
-            If (!(Test-Path $BackupPath)) {
-                Write-Host "Creating backup folder 'OneDriveBackupFiles' on your desktop..."
-                New-item -Path "$env:USERPROFILE\Desktop" -Name "OneDriveBackupFiles" -ItemType Directory -Force | Out-Null
-            }
-
-            Write-Host "Moving all files (including hidden) to $BackupPath. Please wait..."
-            # Robust move loop that includes hidden files and skips errors for busy items
-            Get-ChildItem -Path "$env:USERPROFILE\OneDrive" -Force -ErrorAction SilentlyContinue | ForEach-Object {
-                Try {
-                    Move-Item -Path $_.FullName -Destination $BackupPath -Force -ErrorAction Stop
-                } Catch {
-                    Write-Warning "Failed to move: $($_.FullName). File may be in use."
-                }
-            }
-            
-            # CRITICAL SAFETY CHECK: Only proceed with deletion if the folder is truly empty
-            $RemainingFiles = Get-ChildItem -Path "$env:USERPROFILE\OneDrive" -Force -ErrorAction SilentlyContinue
-            If ($RemainingFiles) {
-                Write-Warning "CRITICAL: Some files could not be moved from OneDrive. To prevent data loss, the OneDrive folder will NOT be deleted. Please check 'OneDriveBackupFiles' on your desktop."
-                $SkipRemoval = $true
-            } Else {
-                Write-Host "Successfully moved all files to $BackupPath."
-                $SkipRemoval = $false
-            }
-        }
-        Else {
-            Write-Host "OneDrive folder not found. Skipping move."
-            $SkipRemoval = $false
-        }
-        Else {
-            Write-Host "Either the OneDrive folder does not exist or there are no files to be found in the folder. Proceeding with removal of OneDrive."
-            Start-Sleep 1
-            Write-Host "Enabling the Group Policy 'Prevent the usage of OneDrive for File Storage'."
-            $OneDriveKey = 'HKLM:Software\Policies\Microsoft\Windows\OneDrive'
-            If (!(Test-Path $OneDriveKey)) {
-                Mkdir $OneDriveKey
-                Set-ItemProperty $OneDriveKey -Name OneDrive -Value DisableFileSyncNGSC
-            }
-            Set-ItemProperty $OneDriveKey -Name OneDrive -Value DisableFileSyncNGSC
-        }
-
-        Write-Host "Uninstalling OneDrive. Please wait..."
-    
-        New-PSDrive  HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
-        $onedrive = "$env:SYSTEMROOT\SysWOW64\OneDriveSetup.exe"
-        $ExplorerReg1 = "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
-        $ExplorerReg2 = "HKCR:\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
-        Stop-Process -Name "OneDrive*"
-        Start-Sleep 2
-        If (!(Test-Path $onedrive)) {
-            $onedrive = "$env:SYSTEMROOT\System32\OneDriveSetup.exe"
-        }
-        Start-Process $onedrive "/uninstall" -NoNewWindow -Wait
-        Start-Sleep 2
-        Write-Host "Stopping explorer"
-        Start-Sleep 1
-        taskkill.exe /F /IM explorer.exe
-        Start-Sleep 3
-        Write-Host "Removing leftover OneDrive directories..."
-        If (Test-Path "$env:USERPROFILE\OneDrive" -and !$SkipRemoval) {
-            Remove-Item "$env:USERPROFILE\OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
-        }
-        If (Test-Path "$env:LOCALAPPDATA\Microsoft\OneDrive") {
-            Remove-Item "$env:LOCALAPPDATA\Microsoft\OneDrive" -Force -Recurse
-        }
-        If (Test-Path "$env:PROGRAMDATA\Microsoft OneDrive") {
-            Remove-Item "$env:PROGRAMDATA\Microsoft OneDrive" -Force -Recurse
-        }
-        If (Test-Path "$env:SYSTEMDRIVE\OneDriveTemp") {
-            Remove-Item "$env:SYSTEMDRIVE\OneDriveTemp" -Force -Recurse
-        }
-        Write-Host "Removing OneDrive from windows explorer"
-        If (!(Test-Path $ExplorerReg1)) {
-            New-Item $ExplorerReg1
-        }
-        Set-ItemProperty $ExplorerReg1 System.IsPinnedToNameSpaceTree -Value 0 
-        If (!(Test-Path $ExplorerReg2)) {
-            New-Item $ExplorerReg2
-        }
-        Set-ItemProperty $ExplorerReg2 System.IsPinnedToNameSpaceTree -Value 0
-        Write-Host "Restarting Explorer that was shut down before."
-        Start-Process explorer.exe -NoNewWindow
-        Write-Host "OneDrive has been successfully uninstalled!"
-        
-        Remove-item env:OneDrive
-    })
+$RemoveOnedrive.Add_Click({
+    Try { UninstallOneDrive } Catch {
+        Log-Error -Message $_.Exception.Message -Source 'OneDrive'
+        Write-Warning $_.Exception.Message
+    }
+})
 
 $InstallNet35.Add_Click( {
 

@@ -1,0 +1,12 @@
+name: Validate PowerShell
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse scripts and run mocked safety checks
+        shell: powershell
+        run: .\tests\Validate.ps1
