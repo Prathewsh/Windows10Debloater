@@ -180,8 +180,10 @@ Function Remove-Keys {
         
     #This writes the output of each key it is removing and also removes the keys listed above.
     ForEach ($Key in $Keys) {
-        Write-Output "Removing $Key from registry"
-        Remove-Item $Key -Recurse
+        If (Test-Path $Key) {
+            Write-Output "Removing $Key from registry"
+            Remove-Item $Key -Recurse
+        }
     }
 }
             
@@ -296,8 +298,8 @@ Function Protect-Privacy {
         
     #Disables scheduled tasks that are considered unnecessary 
     Write-Output "Disabling scheduled tasks"
-    Get-ScheduledTask  Consolidator | Disable-ScheduledTask
-    Get-ScheduledTask  UsbCeip | Disable-ScheduledTask
+    Get-ScheduledTask  Consolidator -ErrorAction SilentlyContinue | Disable-ScheduledTask
+    Get-ScheduledTask  UsbCeip -ErrorAction SilentlyContinue | Disable-ScheduledTask
 
     #Additional telemetry tasks (Application Experience) - compatible with 22H2
     Write-Output "Disabling Application Experience telemetry tasks"
